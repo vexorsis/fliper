@@ -1,0 +1,7 @@
+.build/
+Packages/
+*.xcodeproj/
+xcuserdata/
+DerivedData/
+*.swiftdoc
+*.swiftsourceinfo
