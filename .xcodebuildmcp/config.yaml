@@ -1,0 +1,13 @@
+schemaVersion: 1
+enabledWorkflows:
+  - simulator
+debug: false
+sentryDisabled: false
+setupPreferences:
+  platforms:
+    - iOS
+sessionDefaults:
+  projectPath: Demo/FliperDemo/FliperDemo.xcodeproj
+  scheme: FliperDemo
+  simulatorId: B9EDC010-6C7E-4C4E-A50A-5F4B5ABD2A35
+  simulatorName: iPhone 17 Pro xiaozhi
