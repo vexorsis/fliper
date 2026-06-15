@@ -21,7 +21,7 @@ public struct FliperThumbnail<Content: View>: View {
 
     public var body: some View {
         content()
-            .matchedGeometryEffect(id: "fliper-\(index)", in: namespace)
+            .matchedGeometryEffect(id: TransitionCoordinator.matchedGeometryID(for: index), in: namespace)
             .onTapGesture {
                 withAnimation(.spring()) {
                     isPresented = true

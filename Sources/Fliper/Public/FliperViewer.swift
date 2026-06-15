@@ -13,7 +13,6 @@ public struct FliperViewer<Content: View>: View {
     let content: (Int) -> Content
 
     @State private var currentZoomScale: CGFloat = 1.0
-    @State private var startIndex: Int = 0
 
     public init(
         selection: Binding<Int>,
@@ -53,7 +52,7 @@ public struct FliperViewer<Content: View>: View {
                     ) {
                         content(index)
                             .matchedGeometryEffect(
-                                id: "fliper-\(index)",
+                                id: TransitionCoordinator.matchedGeometryID(for: index),
                                 in: namespace
                             )
                     }
@@ -64,9 +63,6 @@ public struct FliperViewer<Content: View>: View {
                     onDismiss: onDismiss
                 ))
             )
-            .onAppear {
-                startIndex = selection
-            }
     }
 
     private func zoomScaleBinding(for index: Int) -> Binding<CGFloat> {
