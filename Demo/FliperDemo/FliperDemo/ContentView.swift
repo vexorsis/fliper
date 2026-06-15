@@ -9,6 +9,7 @@ struct ContentView: View {
     @Namespace private var namespace
     @State private var selectedIndex: Int = 0
     @State private var isPresented: Bool = false
+    @State private var dismissProgress: CGFloat = 0
     @State private var selectedItems: [PhotosPickerItem] = []
     @State private var images: [UIImage] = []
     @State private var isLoading: Bool = false
@@ -19,55 +20,60 @@ struct ContentView: View {
         GridItem(.flexible(), spacing: 2),
     ]
 
+    private var thumbnailGrid: some View {
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 2) {
+                ForEach(0..<images.count, id: \.self) { index in
+                    FliperThumbnail(
+                        index: index,
+                        namespace: namespace,
+                        isPresented: $isPresented,
+                        selection: $selectedIndex
+                    ) {
+                        Image(uiImage: images[index])
+                            .resizable()
+                            .aspectRatio(1, contentMode: .fill)
+                            .clipped()
+                    }
+                }
+            }
+        }
+    }
+
     var body: some View {
         NavigationStack {
-            ScrollView {
-                LazyVGrid(columns: columns, spacing: 2) {
-                    ForEach(0..<images.count, id: \.self) { index in
-                        FliperThumbnail(
-                            index: index,
-                            namespace: namespace,
-                            isPresented: $isPresented,
-                            selection: $selectedIndex
-                        ) {
-                            Image(uiImage: images[index])
-                                .resizable()
-                                .aspectRatio(1, contentMode: .fill)
-                                .clipped()
-                        }
+            thumbnailGrid
+                .overlay {
+                    if isLoading {
+                        ProgressView("Loading photos...")
+                    } else if images.isEmpty {
+                        ContentUnavailableView(
+                            "No Photos",
+                            systemImage: "photo.on.rectangle.angled",
+                            description: Text("Tap + to pick photos from your library")
+                        )
                     }
                 }
-            }
-            .overlay {
-                if isLoading {
-                    ProgressView("Loading photos...")
-                } else if images.isEmpty {
-                    ContentUnavailableView(
-                        "No Photos",
-                        systemImage: "photo.on.rectangle.angled",
-                        description: Text("Tap + to pick photos from your library")
-                    )
-                }
-            }
-            .overlay {
-                if isPresented {
-                    FliperTransition(isPresented: $isPresented) {
-                        FliperViewer(
-                            selection: $selectedIndex,
-                            namespace: namespace,
-                            itemCount: images.count,
-                            onDismiss: {
-                                isPresented = false
+                .overlay {
+                    if isPresented {
+                        FliperTransition(isPresented: $isPresented, dismissProgress: $dismissProgress) {
+                            FliperViewer(
+                                selection: $selectedIndex,
+                                namespace: namespace,
+                                itemCount: images.count,
+                                dismissProgress: $dismissProgress,
+                                onDismiss: {
+                                    isPresented = false
+                                }
+                            ) { index in
+                                Image(uiImage: images[index])
+                                    .resizable()
+                                    .aspectRatio(contentMode: .fit)
                             }
-                        ) { index in
-                            Image(uiImage: images[index])
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
                         }
                     }
                 }
-            }
-            .toolbar {
+                .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     PhotosPicker(
                         selection: $selectedItems,

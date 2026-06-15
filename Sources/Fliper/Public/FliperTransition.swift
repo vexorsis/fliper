@@ -1,17 +1,28 @@
 import SwiftUI
 
 @available(iOS 16, macOS 13, *)
-struct FliperTransition<Content: View>: View {
+public struct FliperTransition<Content: View>: View {
     @Binding var isPresented: Bool
+    @Binding var dismissProgress: CGFloat
     @ViewBuilder let content: () -> Content
 
     @State private var animationProgress: CGFloat = 0.0
     @State private var isVisible: Bool = false
 
-    var body: some View {
+    public init(
+        isPresented: Binding<Bool>,
+        dismissProgress: Binding<CGFloat> = .constant(0),
+        @ViewBuilder content: @escaping () -> Content
+    ) {
+        self._isPresented = isPresented
+        self._dismissProgress = dismissProgress
+        self.content = content
+    }
+
+    public var body: some View {
         ZStack {
             if isVisible {
-                let backgroundOpacity = Double(animationProgress)
+                let backgroundOpacity = Double(animationProgress) * (1.0 - Double(dismissProgress))
                 let contentScale = 1.0 + (1.0 - animationProgress) * -0.05
 
                 Color.black
@@ -22,6 +33,14 @@ struct FliperTransition<Content: View>: View {
                             .scaleEffect(contentScale)
                     )
                     .transition(.opacity)
+            }
+        }
+        .onAppear {
+            if isPresented {
+                isVisible = true
+                withAnimation(.spring(response: 0.35, dampingFraction: 0.85)) {
+                    animationProgress = 1.0
+                }
             }
         }
         .onChange(of: isPresented) { newValue in

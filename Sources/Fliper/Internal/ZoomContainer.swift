@@ -5,22 +5,26 @@ struct ZoomContainer<Content: View>: View {
     let maxScale: CGFloat
     let doubleTapScale: CGFloat
     @Binding var currentScale: CGFloat
+    @Binding var dragTranslation: CGSize
+    @Binding var accumulatedOffset: CGSize
     @ViewBuilder let content: () -> Content
 
     @State private var scale: CGFloat = 1.0
-    @State private var offset: CGSize = .zero
-    @GestureState private var dragOffset: CGSize = .zero
     @GestureState private var magnificationScale: CGFloat = 1.0
 
     init(
         maxScale: CGFloat = 5.0,
         doubleTapScale: CGFloat = 2.0,
         currentScale: Binding<CGFloat>,
+        dragTranslation: Binding<CGSize>,
+        accumulatedOffset: Binding<CGSize>,
         @ViewBuilder content: @escaping () -> Content
     ) {
         self.maxScale = maxScale
         self.doubleTapScale = doubleTapScale
         self._currentScale = currentScale
+        self._dragTranslation = dragTranslation
+        self._accumulatedOffset = accumulatedOffset
         self.content = content
     }
 
@@ -30,11 +34,10 @@ struct ZoomContainer<Content: View>: View {
                 .scaleEffect(effectiveScale)
                 .offset(effectiveOffset(in: geometry))
                 .gesture(magnificationGesture)
-                .gesture(dragGesture(in: geometry))
                 .gesture(doubleTapGesture)
                 .onChange(of: currentScale) { newScale in
                     if newScale <= 1.0 {
-                        offset = .zero
+                        accumulatedOffset = .zero
                     }
                 }
                 .onChange(of: effectiveScale) { newScale in
@@ -51,8 +54,8 @@ struct ZoomContainer<Content: View>: View {
 
     private func effectiveOffset(in geometry: GeometryProxy) -> CGSize {
         let totalOffset = CGSize(
-            width: offset.width + dragOffset.width,
-            height: offset.height + dragOffset.height
+            width: accumulatedOffset.width + dragTranslation.width,
+            height: accumulatedOffset.height + dragTranslation.height
         )
         if effectiveScale <= 1.0 {
             return .zero
@@ -81,30 +84,10 @@ struct ZoomContainer<Content: View>: View {
                 if newScale < 1.0 {
                     withAnimation(.spring()) {
                         scale = 1.0
-                        offset = .zero
+                        accumulatedOffset = .zero
                     }
                 } else {
                     scale = newScale
-                }
-            }
-    }
-
-    private func dragGesture(in geometry: GeometryProxy) -> some Gesture {
-        DragGesture()
-            .updating($dragOffset) { value, state, _ in
-                if scale > 1.0 {
-                    state = value.translation
-                }
-            }
-            .onEnded { value in
-                if scale > 1.0 {
-                    offset = boundedOffset(
-                        CGSize(
-                            width: offset.width + value.translation.width,
-                            height: offset.height + value.translation.height
-                        ),
-                        in: geometry
-                    )
                 }
             }
     }
@@ -115,7 +98,7 @@ struct ZoomContainer<Content: View>: View {
                 withAnimation(.spring()) {
                     if scale > 1.0 {
                         scale = 1.0
-                        offset = .zero
+                        accumulatedOffset = .zero
                     } else {
                         scale = doubleTapScale
                     }
