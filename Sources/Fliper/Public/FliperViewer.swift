@@ -41,7 +41,7 @@ public struct FliperViewer<Content: View>: View {
 
     public var body: some View {
         GeometryReader { geometry in
-            backgroundColor
+            backgroundColor.opacity(backgroundOpacity)
                 .ignoresSafeArea()
                 .overlay(
                     PagedScroll(
@@ -74,6 +74,15 @@ public struct FliperViewer<Content: View>: View {
                     containerSize = newSize
                 }
         }
+    }
+
+    // MARK: - Background Fade on Dismiss
+
+    private var backgroundOpacity: Double {
+        guard viewerDragOffset.height > 0 else { return 1.0 }
+        let screenHeight = containerSize.height > 0 ? containerSize.height : 800
+        let progress = min(1.0, viewerDragOffset.height / screenHeight)
+        return 1.0 - progress
     }
 
     // MARK: - Unified Drag Gesture
