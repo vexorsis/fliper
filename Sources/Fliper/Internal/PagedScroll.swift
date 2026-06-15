@@ -5,10 +5,9 @@ struct PagedScroll<Content: View>: View {
     @Binding var currentIndex: Int
     let itemCount: Int
     let isZoomed: Bool
+    let externalDragOffset: CGFloat
+    let isDragging: Bool
     @ViewBuilder let content: (Int) -> Content
-
-    @State private var dragOffset: CGFloat = 0
-    @State private var isDragging = false
 
     private let swipeThreshold: CGFloat = 0.2  // 20% of page width
 
@@ -16,11 +15,15 @@ struct PagedScroll<Content: View>: View {
         currentIndex: Binding<Int>,
         itemCount: Int,
         isZoomed: Bool,
+        externalDragOffset: CGFloat = 0,
+        isDragging: Bool = false,
         @ViewBuilder content: @escaping (Int) -> Content
     ) {
         self._currentIndex = currentIndex
         self.itemCount = itemCount
         self.isZoomed = isZoomed
+        self.externalDragOffset = externalDragOffset
+        self.isDragging = isDragging
         self.content = content
     }
 
@@ -35,9 +38,8 @@ struct PagedScroll<Content: View>: View {
                 }
             }
             .offset(x: pageOffset(in: geometry))
-            .gesture(dragGesture(in: geometry))
             .animation(isDragging ? .none : .spring(), value: currentIndex)
-            .animation(isDragging ? .none : .spring(), value: dragOffset)
+            .animation(isDragging ? .none : .spring(), value: externalDragOffset)
         }
     }
 
@@ -49,36 +51,12 @@ struct PagedScroll<Content: View>: View {
     }
 
     private func elasticDragOffset(in geometry: GeometryProxy) -> CGFloat {
-        let proposed = dragOffset
+        let proposed = externalDragOffset
         let atStart = currentIndex == 0 && proposed > 0
         let atEnd = currentIndex == itemCount - 1 && proposed < 0
         if atStart || atEnd {
             return proposed * 0.3
         }
         return proposed
-    }
-
-    private func dragGesture(in geometry: GeometryProxy) -> some Gesture {
-        DragGesture(minimumDistance: 10)
-            .onChanged { value in
-                guard !isZoomed else { return }
-                guard abs(value.translation.width) > abs(value.translation.height) else { return }
-                isDragging = true
-                dragOffset = value.translation.width
-            }
-            .onEnded { value in
-                guard !isZoomed else { return }
-                isDragging = false
-                let pageWidth = geometry.size.width
-                let threshold = pageWidth * swipeThreshold
-                withAnimation(.spring()) {
-                    if value.translation.width < -threshold && currentIndex < itemCount - 1 {
-                        currentIndex += 1
-                    } else if value.translation.width > threshold && currentIndex > 0 {
-                        currentIndex -= 1
-                    }
-                    dragOffset = 0
-                }
-            }
     }
 }
