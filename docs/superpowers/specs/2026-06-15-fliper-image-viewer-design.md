@@ -26,6 +26,7 @@ struct FliperViewer<Content: View>: View {
         doubleTapScale: CGFloat = 2.0,
         dismissThreshold: CGFloat = 0.25,
         backgroundColor: Color = .black,
+        onDismiss: @escaping () -> Void = {},
         @ViewBuilder content: @escaping (Int) -> Content
     )
 }
@@ -34,6 +35,7 @@ struct FliperViewer<Content: View>: View {
 - `selection` — binding to the currently visible image index, synced bidirectionally
 - `namespace` — shared `Namespace.ID` for matched geometry hero transition
 - `itemCount` — total number of images in the gallery
+- `onDismiss` — called when the viewer is dismissed via swipe-to-dismiss
 - `content` — `@ViewBuilder` closure that returns the view for a given index (user provides their own image loading)
 
 ### FliperThumbnail
@@ -46,14 +48,17 @@ struct FliperThumbnail<Content: View>: View {
         index: Int,
         namespace: Namespace.ID,
         isPresented: Binding<Bool>,
+        selection: Binding<Int>,
         @ViewBuilder content: @escaping () -> Content
     )
 }
+
 ```
 
 - `index` — the image index this thumbnail represents
 - `namespace` — same namespace passed to `FliperViewer`
 - `isPresented` — binding that triggers the viewer when set to true
+- `selection` — binding to the current image index; set to `index` on tap so the viewer opens to the correct image
 - `content` — the thumbnail view (typically a small `Image`)
 
 ### Usage Flow
