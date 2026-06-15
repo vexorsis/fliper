@@ -16,6 +16,7 @@ public struct FliperViewer<Content: View>: View {
     @State private var viewerDragOffset: CGSize = .zero
     @GestureState private var gestureDragOffset: CGSize = .zero
     @State private var containerSize: CGSize = .zero
+    @State private var useHeroTransition = true
 
     public init(
         selection: Binding<Int>,
@@ -57,10 +58,12 @@ public struct FliperViewer<Content: View>: View {
                             currentScale: zoomScaleBinding(for: index)
                         ) {
                             content(index)
-                                .matchedGeometryEffect(
-                                    id: TransitionCoordinator.matchedGeometryID(for: index),
-                                    in: namespace
-                                )
+                                .if(useHeroTransition) { view in
+                                    view.matchedGeometryEffect(
+                                        id: TransitionCoordinator.matchedGeometryID(for: index),
+                                        in: namespace
+                                    )
+                                }
                         }
                     }
                     .modifier(DismissController(
