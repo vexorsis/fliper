@@ -14,8 +14,7 @@ public struct FliperViewer<Content: View>: View {
 
     @State private var currentZoomScale: CGFloat = 1.0
     @State private var viewerDragOffset: CGSize = .zero
-    @State private var containerSize: CGSize = .zero
-    @State private var useHeroTransition = true
+    @State private var containerSize: CGSize = CGSize(width: 400, height: 800)
 
     public init(
         selection: Binding<Int>,
@@ -39,6 +38,10 @@ public struct FliperViewer<Content: View>: View {
         self.content = content
     }
 
+    private var isZoomed: Bool {
+        currentZoomScale > 1.0
+    }
+
     public var body: some View {
         GeometryReader { geometry in
             backgroundColor.opacity(backgroundOpacity)
@@ -47,7 +50,7 @@ public struct FliperViewer<Content: View>: View {
                     PagedScroll(
                         currentIndex: $selection,
                         itemCount: itemCount,
-                        isZoomed: currentZoomScale > 1.0,
+                        isZoomed: isZoomed,
                         externalDragOffset: viewerDragOffset.width,
                         isDragging: viewerDragOffset.width != 0
                     ) { index in
@@ -57,19 +60,18 @@ public struct FliperViewer<Content: View>: View {
                             currentScale: zoomScaleBinding(for: index)
                         ) {
                             content(index)
-                                .if(useHeroTransition) { view in
-                                    view.matchedGeometryEffect(
-                                        id: TransitionCoordinator.matchedGeometryID(for: index),
-                                        in: namespace
-                                    )
-                                }
+                                .matchedGeometryEffect(
+                                    id: TransitionCoordinator.matchedGeometryID(for: index),
+                                    in: namespace
+                                )
                         }
                     }
                     .modifier(DismissController(
-                        isZoomed: currentZoomScale > 1.0,
+                        isZoomed: isZoomed,
+                        dismissProgress: dismissProgress,
                         verticalDragOffset: viewerDragOffset.height
                     ))
-                    .gesture(unifiedDragGesture)
+                    .gesture(unifiedDragGesture, including: isZoomed ? .subviews : .gesture)
                 )
                 .onAppear { containerSize = geometry.size }
                 .onChange(of: geometry.size) { newSize in
@@ -83,13 +85,17 @@ public struct FliperViewer<Content: View>: View {
         }
     }
 
+    // MARK: - Dismiss Progress
+
+    private var dismissProgress: CGFloat {
+        guard viewerDragOffset.height > 0 else { return 0 }
+        return min(1.0, viewerDragOffset.height / containerSize.height)
+    }
+
     // MARK: - Background Fade on Dismiss
 
     private var backgroundOpacity: Double {
-        guard viewerDragOffset.height > 0 else { return 1.0 }
-        let screenHeight = containerSize.height > 0 ? containerSize.height : 800
-        let progress = min(1.0, viewerDragOffset.height / screenHeight)
-        return 1.0 - progress
+        1.0 - Double(dismissProgress)
     }
 
     // MARK: - Unified Drag Gesture
@@ -97,7 +103,7 @@ public struct FliperViewer<Content: View>: View {
     private var unifiedDragGesture: some Gesture {
         DragGesture(minimumDistance: 10)
             .onChanged { value in
-                guard currentZoomScale <= 1.0 else { return }
+                guard !isZoomed else { return }
                 let translation = value.translation
                 let isHorizontal = abs(translation.width) > abs(translation.height)
                 if isHorizontal {
@@ -107,14 +113,18 @@ public struct FliperViewer<Content: View>: View {
                 }
             }
             .onEnded { value in
+                guard !isZoomed else { return }
                 let translation = value.translation
                 let isHorizontal = abs(translation.width) > abs(translation.height)
                 if isHorizontal {
                     handlePagingEnd(translation: translation)
                 } else if translation.height > 0 {
                     handleDismissEnd(translation: translation)
+                    return
                 }
-                viewerDragOffset = .zero
+                withAnimation(.spring()) {
+                    viewerDragOffset = .zero
+                }
             }
     }
 
@@ -127,15 +137,13 @@ public struct FliperViewer<Content: View>: View {
             } else if translation.width > threshold && selection > 0 {
                 selection -= 1
             }
+            viewerDragOffset = .zero
         }
     }
 
     private func handleDismissEnd(translation: CGSize) {
-        let screenHeight = containerSize.height
-        if translation.height > screenHeight * dismissThreshold {
-            withAnimation(.spring()) {
-                onDismiss()
-            }
+        if translation.height > containerSize.height * dismissThreshold {
+            onDismiss()
         } else {
             withAnimation(.spring()) {
                 viewerDragOffset = .zero

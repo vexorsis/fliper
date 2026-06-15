@@ -28,33 +28,27 @@ struct PagedScroll<Content: View>: View {
     var body: some View {
         GeometryReader { geometry in
             let pageWidth = geometry.size.width
+            let lower = max(0, currentIndex - 1)
+            let upper = min(itemCount, currentIndex + 2)
 
             HStack(spacing: 0) {
-                ForEach(0..<itemCount, id: \.self) { index in
+                ForEach(lower..<upper, id: \.self) { index in
                     content(index)
                         .frame(width: pageWidth, height: geometry.size.height)
                 }
             }
-            .offset(x: pageOffset(in: geometry))
+            .offset(x: pageOffset(lower: lower, pageWidth: pageWidth))
             .animation(isDragging ? .none : .spring(), value: currentIndex)
             .animation(isDragging ? .none : .spring(), value: externalDragOffset)
         }
     }
 
-    private func pageOffset(in geometry: GeometryProxy) -> CGFloat {
-        let pageWidth = geometry.size.width
-        let baseOffset = -CGFloat(currentIndex) * pageWidth
-        let elasticDrag = elasticDragOffset(in: geometry)
-        return baseOffset + elasticDrag
-    }
-
-    private func elasticDragOffset(in geometry: GeometryProxy) -> CGFloat {
-        let proposed = externalDragOffset
+    private func pageOffset(lower: Int, pageWidth: CGFloat) -> CGFloat {
+        let baseOffset = -CGFloat(currentIndex - lower) * pageWidth
+        let proposed = isZoomed ? 0 : externalDragOffset
         let atStart = currentIndex == 0 && proposed > 0
         let atEnd = currentIndex == itemCount - 1 && proposed < 0
-        if atStart || atEnd {
-            return proposed * 0.3
-        }
-        return proposed
+        let elastic = (atStart || atEnd) ? proposed * 0.3 : proposed
+        return baseOffset + elastic
     }
 }

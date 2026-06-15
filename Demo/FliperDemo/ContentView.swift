@@ -21,7 +21,8 @@ struct ContentView: View {
                     FliperThumbnail(
                         index: index,
                         namespace: namespace,
-                        isPresented: $isPresented
+                        isPresented: $isPresented,
+                        selection: $selectedIndex
                     ) {
                         RoundedRectangle(cornerRadius: 4)
                             .fill(colors[index].gradient)

@@ -3,7 +3,10 @@ import SwiftUI
 @available(iOS 16, macOS 13, *)
 struct DismissController: ViewModifier {
     let isZoomed: Bool
+    let dismissProgress: CGFloat
     let verticalDragOffset: CGFloat
+
+    private let minDismissScale: CGFloat = 0.5
 
     func body(content: Content) -> some View {
         content
@@ -13,7 +16,6 @@ struct DismissController: ViewModifier {
 
     private var dismissScale: CGFloat {
         guard !isZoomed else { return 1.0 }
-        let progress = abs(verticalDragOffset) / 1000
-        return max(0.5, 1.0 - progress * 0.5)
+        return max(minDismissScale, 1.0 - dismissProgress * minDismissScale)
     }
 }

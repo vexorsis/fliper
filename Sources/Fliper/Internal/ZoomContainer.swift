@@ -32,6 +32,11 @@ struct ZoomContainer<Content: View>: View {
                 .gesture(magnificationGesture)
                 .gesture(dragGesture(in: geometry))
                 .gesture(doubleTapGesture)
+                .onChange(of: currentScale) { newScale in
+                    if newScale <= 1.0 {
+                        offset = .zero
+                    }
+                }
                 .onChange(of: effectiveScale) { newScale in
                     currentScale = newScale
                 }
