@@ -14,7 +14,6 @@ public struct FliperViewer<Content: View>: View {
 
     @State private var currentZoomScale: CGFloat = 1.0
     @State private var viewerDragOffset: CGSize = .zero
-    @GestureState private var gestureDragOffset: CGSize = .zero
     @State private var containerSize: CGSize = .zero
     @State private var useHeroTransition = true
 
@@ -97,10 +96,6 @@ public struct FliperViewer<Content: View>: View {
 
     private var unifiedDragGesture: some Gesture {
         DragGesture(minimumDistance: 10)
-            .updating($gestureDragOffset) { value, state, _ in
-                guard currentZoomScale <= 1.0 else { return }
-                state = value.translation
-            }
             .onChanged { value in
                 guard currentZoomScale <= 1.0 else { return }
                 let translation = value.translation

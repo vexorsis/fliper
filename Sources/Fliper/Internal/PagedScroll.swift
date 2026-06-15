@@ -9,8 +9,6 @@ struct PagedScroll<Content: View>: View {
     let isDragging: Bool
     @ViewBuilder let content: (Int) -> Content
 
-    private let swipeThreshold: CGFloat = 0.2  // 20% of page width
-
     init(
         currentIndex: Binding<Int>,
         itemCount: Int,
