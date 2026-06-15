@@ -73,6 +73,11 @@ public struct FliperViewer<Content: View>: View {
                 .onChange(of: geometry.size) { newSize in
                     containerSize = newSize
                 }
+                .onChange(of: selection) { _ in
+                    withAnimation(.spring()) {
+                        currentZoomScale = 1.0
+                    }
+                }
         }
     }
 
