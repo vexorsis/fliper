@@ -49,18 +49,22 @@ struct ContentView: View {
                     )
                 }
             }
-            .fullScreenCover(isPresented: $isPresented) {
-                FliperViewer(
-                    selection: $selectedIndex,
-                    namespace: namespace,
-                    itemCount: images.count,
-                    onDismiss: {
-                        isPresented = false
+            .overlay {
+                if isPresented {
+                    FliperTransition(isPresented: $isPresented) {
+                        FliperViewer(
+                            selection: $selectedIndex,
+                            namespace: namespace,
+                            itemCount: images.count,
+                            onDismiss: {
+                                isPresented = false
+                            }
+                        ) { index in
+                            Image(uiImage: images[index])
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                        }
                     }
-                ) { index in
-                    Image(uiImage: images[index])
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
                 }
             }
             .toolbar {
