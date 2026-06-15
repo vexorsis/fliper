@@ -44,7 +44,7 @@ public struct FliperViewer<Content: View>: View {
 
     public var body: some View {
         GeometryReader { geometry in
-            backgroundColor.opacity(backgroundOpacity)
+            Color.clear
                 .ignoresSafeArea()
                 .overlay(
                     PagedScroll(
