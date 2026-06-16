@@ -3,7 +3,7 @@ import PackageDescription
 
 let package = Package(
     name: "Fliper",
-    platforms: [.iOS(.v16)],
+    platforms: [.iOS(.v15)],
     products: [
         .library(name: "Fliper", targets: ["Fliper"]),
     ],
