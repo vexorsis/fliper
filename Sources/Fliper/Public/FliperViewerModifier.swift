@@ -22,20 +22,20 @@ final class FliperSwiftUIDataSource: FliperViewerDataSource {
 // MARK: - Presentation Coordinator
 
 final class FliperPresentationCoordinator: ObservableObject, FliperViewerDelegate {
-    var isPresented: Binding<Bool>?
+    var selectedIndex: Binding<Int?>?
     weak var presentedViewer: FliperViewerController?
 
     func viewerDidDismiss(_ viewer: FliperViewerController) {
-        isPresented?.wrappedValue = false
+        selectedIndex?.wrappedValue = nil
         presentedViewer = nil
     }
 
-    func present(images: [UIImage], currentIndex: Int, isPresented: Binding<Bool>) {
+    func present(images: [UIImage], currentIndex: Int, selectedIndex: Binding<Int?>) {
         guard let presenter = topViewController() else { return }
         let dataSource = FliperSwiftUIDataSource(images: images)
         let viewer = FliperViewerController(dataSource: dataSource, currentIndex: currentIndex)
         viewer.delegate = self
-        self.isPresented = isPresented
+        self.selectedIndex = selectedIndex
         self.presentedViewer = viewer
         presenter.present(viewer, animated: true)
     }
@@ -58,16 +58,15 @@ final class FliperPresentationCoordinator: ObservableObject, FliperViewerDelegat
 // MARK: - View Modifier
 
 struct FliperViewerModifier: ViewModifier {
-    @Binding var isPresented: Bool
+    @Binding var selectedIndex: Int?
     let images: [UIImage]
-    var currentIndex: Int = 0
     @StateObject private var coordinator = FliperPresentationCoordinator()
 
     func body(content: Content) -> some View {
         content
-            .onChange(of: isPresented) { _ in
-                if isPresented {
-                    coordinator.present(images: images, currentIndex: currentIndex, isPresented: $isPresented)
+            .onChange(of: selectedIndex) { newValue in
+                if let index = newValue {
+                    coordinator.present(images: images, currentIndex: index, selectedIndex: $selectedIndex)
                 } else {
                     coordinator.dismiss()
                 }
@@ -79,14 +78,12 @@ struct FliperViewerModifier: ViewModifier {
 
 extension View {
     public func fliperViewer(
-        isPresented: Binding<Bool>,
-        images: [UIImage],
-        currentIndex: Int = 0
+        selectedIndex: Binding<Int?>,
+        images: [UIImage]
     ) -> some View {
         modifier(FliperViewerModifier(
-            isPresented: isPresented,
-            images: images,
-            currentIndex: currentIndex
+            selectedIndex: selectedIndex,
+            images: images
         ))
     }
 }

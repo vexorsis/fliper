@@ -2,8 +2,7 @@ import SwiftUI
 import Fliper
 
 struct ContentView: View {
-    @State private var isPresented = false
-    @State private var selectedIndex = 0
+    @State private var selectedIndex: Int?
     @State private var loadedImages: [UIImage?] = []
 
     private let urls = [
@@ -52,13 +51,12 @@ struct ContentView: View {
                                     .clipped()
                                     .onTapGesture {
                                         selectedIndex = index
-                                        isPresented = true
                                     }
                             }
                         }
                     }
                 }
-                .fliperViewer(isPresented: $isPresented, images: validImages, currentIndex: selectedIndex)
+                .fliperViewer(selectedIndex: $selectedIndex, images: validImages)
             }
         }
         .task { await loadImages() }
