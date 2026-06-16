@@ -12,6 +12,10 @@ struct ContentView: View {
         GridItem(.flexible(), spacing: 2),
     ]
 
+    private var images: [UIImage] {
+        imageNames.compactMap { UIImage(named: $0) }
+    }
+
     var body: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 2) {
@@ -29,60 +33,6 @@ struct ContentView: View {
                 }
             }
         }
-        .fullScreenCover(isPresented: $isPresented) {
-            FliperViewerWrapper(
-                imageNames: imageNames,
-                currentIndex: selectedIndex,
-                isPresented: $isPresented
-            )
-            .ignoresSafeArea()
-        }
-    }
-}
-
-struct FliperViewerWrapper: UIViewControllerRepresentable {
-    let imageNames: [String]
-    let currentIndex: Int
-    @Binding var isPresented: Bool
-
-    func makeUIViewController(context: Context) -> FliperViewerController {
-        let dataSource = FliperDemoDataSource(imageNames: imageNames)
-        let viewer = FliperViewerController(dataSource: dataSource, currentIndex: currentIndex)
-        viewer.delegate = context.coordinator
-        return viewer
-    }
-
-    func updateUIViewController(_ uiViewController: FliperViewerController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator {
-        Coordinator(isPresented: $isPresented)
-    }
-
-    class Coordinator: NSObject, FliperViewerDelegate {
-        @Binding var isPresented: Bool
-
-        init(isPresented: Binding<Bool>) {
-            _isPresented = isPresented
-        }
-
-        func viewerDidDismiss(_ viewer: FliperViewerController) {
-            isPresented = false
-        }
-    }
-}
-
-final class FliperDemoDataSource: FliperViewerDataSource {
-    let imageNames: [String]
-
-    init(imageNames: [String]) {
-        self.imageNames = imageNames
-    }
-
-    func numberOfItems(in viewer: FliperViewerController) -> Int {
-        imageNames.count
-    }
-
-    func viewer(_ viewer: FliperViewerController, imageAt index: Int) -> UIImage {
-        UIImage(named: imageNames[index]) ?? UIImage()
+        .fliperViewer(isPresented: $isPresented, images: images, currentIndex: selectedIndex)
     }
 }
