@@ -58,7 +58,9 @@ public class FliperViewerController: UIViewController {
         }
         if !hasAppeared {
             pagingView.scrollToPage(currentIndex)
-            updateDismissGestureTarget()
+            DispatchQueue.main.async { [weak self] in
+                self?.updateDismissGestureTarget()
+            }
         }
     }
 
