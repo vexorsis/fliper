@@ -5,8 +5,17 @@ public class FliperViewerController: UIViewController {
 
     public var maxZoomScale: CGFloat = 5.0
     public var doubleTapZoomScale: CGFloat = 2.0
-    public var dismissThreshold: CGFloat = 0.25
-    public var interPageSpacing: CGFloat = 20.0
+    public var dismissThreshold: CGFloat = 0.25 {
+        didSet { dismissGesture?.dismissThreshold = dismissThreshold }
+    }
+    public var interPageSpacing: CGFloat = 20.0 {
+        didSet {
+            if let layout = pagingView?.collectionViewLayout as? FliperPagingLayout {
+                layout.interPageSpacing = interPageSpacing
+                pagingView?.updateContentInset()
+            }
+        }
+    }
     public var backgroundColor: UIColor = .black
     public var currentIndex: Int = 0
 
@@ -65,6 +74,9 @@ public class FliperViewerController: UIViewController {
         pagingView.dataSource = self
         pagingView.pagingDelegate = self
         pagingView.currentIndex = currentIndex
+        if let layout = pagingView.collectionViewLayout as? FliperPagingLayout {
+            layout.interPageSpacing = interPageSpacing
+        }
         view.addSubview(pagingView)
     }
 
