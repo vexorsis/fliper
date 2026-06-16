@@ -1,134 +1,88 @@
 import SwiftUI
 import Fliper
-import PhotosUI
-import os
-
-private let logger = Logger(subsystem: "FliperDemo", category: "ContentView")
 
 struct ContentView: View {
-    @Namespace private var namespace
-    @State private var selectedIndex: Int = 0
-    @State private var isPresented: Bool = false
-    @State private var dismissProgress: CGFloat = 0
-    @State private var selectedItems: [PhotosPickerItem] = []
-    @State private var images: [UIImage] = []
-    @State private var isLoading: Bool = false
+    @State private var isPresented = false
+    @State private var selectedIndex = 0
 
+    private let imageNames = (1...12).map { "photo\($0)" }
     private let columns = [
         GridItem(.flexible(), spacing: 2),
         GridItem(.flexible(), spacing: 2),
         GridItem(.flexible(), spacing: 2),
     ]
 
-    private var thumbnailGrid: some View {
+    var body: some View {
         ScrollView {
             LazyVGrid(columns: columns, spacing: 2) {
-                ForEach(0..<images.count, id: \.self) { index in
-                    FliperThumbnail(
-                        index: index,
-                        namespace: namespace,
-                        isPresented: $isPresented,
-                        selection: $selectedIndex
-                    ) {
-                        Image(uiImage: images[index])
-                            .resizable()
-                            .aspectRatio(1, contentMode: .fill)
-                            .clipped()
-                    }
-                }
-            }
-        }
-    }
-
-    var body: some View {
-        NavigationStack {
-            thumbnailGrid
-                .overlay {
-                    if isLoading {
-                        ProgressView("Loading photos...")
-                    } else if images.isEmpty {
-                        ContentUnavailableView(
-                            "No Photos",
-                            systemImage: "photo.on.rectangle.angled",
-                            description: Text("Tap + to pick photos from your library")
-                        )
-                    }
-                }
-                .overlay {
-                    if isPresented {
-                        FliperTransition(isPresented: $isPresented, dismissProgress: $dismissProgress) {
-                            FliperViewer(
-                                selection: $selectedIndex,
-                                namespace: namespace,
-                                itemCount: images.count,
-                                dismissProgress: $dismissProgress,
-                                onDismiss: {
-                                    isPresented = false
-                                }
-                            ) { index in
-                                Image(uiImage: images[index])
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fit)
-                            }
+                ForEach(0..<imageNames.count, id: \.self) { index in
+                    Image(imageNames[index])
+                        .resizable()
+                        .aspectRatio(contentMode: .fill)
+                        .frame(minWidth: 0, maxWidth: .infinity)
+                        .aspectRatio(1, contentMode: .fit)
+                        .clipped()
+                        .onTapGesture {
+                            selectedIndex = index
+                            isPresented = true
                         }
-                    }
-                }
-                .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    PhotosPicker(
-                        selection: $selectedItems,
-                        maxSelectionCount: 20,
-                        matching: .images
-                    ) {
-                        Image(systemName: "plus")
-                    }
-                    .disabled(isLoading)
                 }
             }
-            .onChange(of: selectedItems) { _, newItems in
-                loadImages(from: newItems)
-            }
+        }
+        .fullScreenCover(isPresented: $isPresented) {
+            FliperViewerWrapper(
+                imageNames: imageNames,
+                currentIndex: selectedIndex,
+                isPresented: $isPresented
+            )
+            .ignoresSafeArea()
         }
     }
+}
 
-    private func loadImages(from items: [PhotosPickerItem]) {
-        logger.info("onChange fired with \(items.count) items")
-        guard !items.isEmpty else { return }
-        isLoading = true
-        Task {
-            var loaded: [UIImage] = []
-            for item in items {
-                let result = await loadImage(from: item)
-                if let result {
-                    loaded.append(result)
-                }
-            }
-            logger.info("Loaded \(loaded.count) images total")
-            images = loaded
-            isLoading = false
-        }
+struct FliperViewerWrapper: UIViewControllerRepresentable {
+    let imageNames: [String]
+    let currentIndex: Int
+    @Binding var isPresented: Bool
+
+    func makeUIViewController(context: Context) -> FliperViewerController {
+        let dataSource = FliperDemoDataSource(imageNames: imageNames)
+        let viewer = FliperViewerController(dataSource: dataSource, currentIndex: currentIndex)
+        viewer.delegate = context.coordinator
+        return viewer
     }
 
-    private func loadImage(from item: PhotosPickerItem) async -> UIImage? {
-        // Try loadTransferable with Data
-        if let data = try? await item.loadTransferable(type: Data.self) {
-            logger.info("loadTransferable(Data) succeeded, size: \(data.count)")
-            if let image = UIImage(data: data) {
-                return image
-            }
+    func updateUIViewController(_ uiViewController: FliperViewerController, context: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(isPresented: $isPresented)
+    }
+
+    class Coordinator: NSObject, FliperViewerDelegate {
+        @Binding var isPresented: Bool
+
+        init(isPresented: Binding<Bool>) {
+            _isPresented = isPresented
         }
 
-        // Fallback: try loadTransferable with URL
-        if let url = try? await item.loadTransferable(type: URL.self) {
-            logger.info("loadTransferable(URL) succeeded: \(url.path)")
-            if let data = try? Data(contentsOf: url) {
-                if let image = UIImage(data: data) {
-                    return image
-                }
-            }
+        func viewerDidDismiss(_ viewer: FliperViewerController) {
+            isPresented = false
         }
+    }
+}
 
-        logger.error("All load methods failed for item")
-        return nil
+final class FliperDemoDataSource: FliperViewerDataSource {
+    let imageNames: [String]
+
+    init(imageNames: [String]) {
+        self.imageNames = imageNames
+    }
+
+    func numberOfItems(in viewer: FliperViewerController) -> Int {
+        imageNames.count
+    }
+
+    func viewer(_ viewer: FliperViewerController, imageAt index: Int) -> UIImage {
+        UIImage(named: imageNames[index]) ?? UIImage()
     }
 }
