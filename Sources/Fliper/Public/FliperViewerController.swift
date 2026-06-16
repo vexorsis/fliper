@@ -63,6 +63,7 @@ public class FliperViewerController: UIViewController {
         if !hasAppeared {
             hasAppeared = true
             pagingView.scrollToPage(currentIndex)
+            updateDismissGestureTarget()
         }
     }
 
