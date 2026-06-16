@@ -92,16 +92,14 @@ final class FliperImageCell: UICollectionViewCell {
         let fitHeight = imageSize.height * scale
 
         imageView.frame = CGRect(
-            x: max(0, (screenSize.width - fitWidth) / 2.0),
-            y: max(0, (screenSize.height - fitHeight) / 2.0),
+            x: 0,
+            y: 0,
             width: fitWidth,
             height: fitHeight
         )
 
-        scrollView.contentSize = CGSize(
-            width: max(screenSize.width, fitWidth),
-            height: max(screenSize.height, fitHeight)
-        )
+        scrollView.contentSize = imageView.frame.size
+        centerImageViewAfterZoom()
     }
 
     @objc private func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
