@@ -56,15 +56,15 @@ public class FliperViewerController: UIViewController {
             }
             pagingView.updateContentInset()
         }
+        if !hasAppeared {
+            pagingView.scrollToPage(currentIndex)
+            updateDismissGestureTarget()
+        }
     }
 
     public override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        if !hasAppeared {
-            hasAppeared = true
-            pagingView.scrollToPage(currentIndex)
-            updateDismissGestureTarget()
-        }
+        hasAppeared = true
     }
 
     public func reloadData() {
