@@ -19,40 +19,32 @@ public final class FliperSwiftUIDataSource: FliperViewerDataSource {
     }
 }
 
-// MARK: - View Modifier
+// MARK: - Presentation Coordinator
 
-public struct FliperViewerModifier: ViewModifier {
-    @Binding var isPresented: Bool
-    let images: [UIImage]
-    var currentIndex: Int = 0
+final class FliperPresentationCoordinator: ObservableObject, FliperViewerDelegate {
+    var isPresented: Binding<Bool>?
+    weak var presentedViewer: FliperViewerController?
 
-    public func body(content: Content) -> some View {
-        content
-            .onChange(of: isPresented) { _ in
-                if isPresented {
-                    presentViewer()
-                } else {
-                    dismissViewer()
-                }
-            }
+    func viewerDidDismiss(_ viewer: FliperViewerController) {
+        isPresented?.wrappedValue = false
+        presentedViewer = nil
     }
 
-    private func presentViewer() {
-        guard let presenter = Self.topViewController() else { return }
+    func present(images: [UIImage], currentIndex: Int, isPresented: Binding<Bool>) {
+        guard let presenter = topViewController() else { return }
         let dataSource = FliperSwiftUIDataSource(images: images)
         let viewer = FliperViewerController(dataSource: dataSource, currentIndex: currentIndex)
-        viewer.delegate = Self.delegate
-        Self.delegate.isPresented = $isPresented
-        Self.delegate.presentedViewer = viewer
+        viewer.delegate = self
+        self.isPresented = isPresented
+        self.presentedViewer = viewer
         presenter.present(viewer, animated: true)
     }
 
-    private func dismissViewer() {
-        Self.delegate.presentedViewer?.dismiss(animated: true)
-        Self.delegate.presentedViewer = nil
+    func dismiss() {
+        presentedViewer?.dismissViewer()
     }
 
-    private static func topViewController() -> UIViewController? {
+    private func topViewController() -> UIViewController? {
         guard let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
               let root = scene.windows.first?.rootViewController else { return nil }
         var top = root
@@ -61,17 +53,25 @@ public struct FliperViewerModifier: ViewModifier {
         }
         return top
     }
+}
 
-    private static let delegate = Delegate()
+// MARK: - View Modifier
 
-    private class Delegate: FliperViewerDelegate {
-        var isPresented: Binding<Bool>?
-        weak var presentedViewer: FliperViewerController?
+struct FliperViewerModifier: ViewModifier {
+    @Binding var isPresented: Bool
+    let images: [UIImage]
+    var currentIndex: Int = 0
+    @StateObject private var coordinator = FliperPresentationCoordinator()
 
-        func viewerDidDismiss(_ viewer: FliperViewerController) {
-            isPresented?.wrappedValue = false
-            presentedViewer = nil
-        }
+    func body(content: Content) -> some View {
+        content
+            .onChange(of: isPresented) { _ in
+                if isPresented {
+                    coordinator.present(images: images, currentIndex: currentIndex, isPresented: $isPresented)
+                } else {
+                    coordinator.dismiss()
+                }
+            }
     }
 }
 
