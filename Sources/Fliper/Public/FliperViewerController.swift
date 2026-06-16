@@ -11,6 +11,11 @@ public class FliperViewerController: UIViewController {
     public var currentIndex: Int = 0
 
     private let dataSource: FliperViewerDataSource
+    private var pagingView: FliperPagingView!
+    private var dismissGesture: FliperDismissGesture!
+    private var isZoomed = false
+
+    private static let cellReuseIdentifier = "FliperImageCell"
 
     public init(dataSource: FliperViewerDataSource, currentIndex: Int = 0) {
         self.dataSource = dataSource
@@ -25,11 +30,139 @@ public class FliperViewerController: UIViewController {
     public override func viewDidLoad() {
         super.viewDidLoad()
         view.backgroundColor = backgroundColor
+        setupPagingView()
+        setupDismissGesture()
     }
 
-    public func reloadData() {}
-    public func dismissViewer() {}
+    public override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        pagingView.frame = view.bounds
+        if let layout = pagingView.collectionViewLayout as? FliperPagingLayout {
+            layout.invalidateLayout()
+        }
+        pagingView.updateContentInset()
+    }
+
+    public override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        pagingView.scrollToPage(currentIndex)
+    }
+
+    public func reloadData() {
+        pagingView.reloadData()
+    }
+
+    public func dismissViewer() {
+        dismiss(animated: true) { [weak self] in
+            guard let self else { return }
+            self.delegate?.viewerDidDismiss(self)
+        }
+    }
+
+    private func setupPagingView() {
+        pagingView = FliperPagingView(frame: view.bounds)
+        pagingView.register(FliperImageCell.self, forCellWithReuseIdentifier: Self.cellReuseIdentifier)
+        pagingView.dataSource = self
+        pagingView.pagingDelegate = self
+        pagingView.currentIndex = currentIndex
+        view.addSubview(pagingView)
+    }
+
+    private func setupDismissGesture() {
+        dismissGesture = FliperDismissGesture()
+        dismissGesture.dismissDelegate = self
+        dismissGesture.dismissThreshold = dismissThreshold
+        view.addGestureRecognizer(dismissGesture)
+    }
+
+    private func updateDismissGestureTarget() {
+        guard let cell = currentVisibleCell() else { return }
+        dismissGesture.setTargetScrollView(cell.scrollView)
+    }
+
+    private func currentVisibleCell() -> FliperImageCell? {
+        pagingView.visibleCells
+            .compactMap { $0 as? FliperImageCell }
+            .first { pagingView.indexPath(for: $0)?.item == currentIndex }
+    }
+
+    private func resetZoomOnCell(at index: Int) {
+        guard let cell = pagingView.cellForItem(at: IndexPath(item: index, section: 0)) as? FliperImageCell else { return }
+        cell.resetZoom()
+    }
 }
+
+// MARK: - UICollectionViewDataSource
+
+extension FliperViewerController: UICollectionViewDataSource {
+    public func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        dataSource.numberOfItems(in: self)
+    }
+
+    public func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        let cell = collectionView.dequeueReusableCell(withReuseIdentifier: Self.cellReuseIdentifier, for: indexPath) as! FliperImageCell
+        let image = dataSource.viewer(self, imageAt: indexPath.item)
+        cell.configure(image: image, maxZoomScale: maxZoomScale, doubleTapZoomScale: doubleTapZoomScale)
+        cell.cellDelegate = self
+        return cell
+    }
+}
+
+// MARK: - FliperPagingViewDelegate
+
+extension FliperViewerController: FliperPagingViewDelegate {
+    func pagingView(_ pagingView: FliperPagingView, didScrollToIndex index: Int) {
+        let previousIndex = currentIndex
+        currentIndex = index
+        if previousIndex != index {
+            resetZoomOnCell(at: previousIndex)
+        }
+        updateDismissGestureTarget()
+        delegate?.viewer(self, didScrollToIndex: index)
+    }
+}
+
+// MARK: - FliperImageCellDelegate
+
+extension FliperViewerController: FliperImageCellDelegate {
+    func cellZoomStateDidChange(_ cell: FliperImageCell, isZoomed: Bool) {
+        self.isZoomed = isZoomed
+        pagingView.isScrollEnabled = !isZoomed
+        dismissGesture.isEnabled = !isZoomed
+    }
+
+    func cellDidLongPress(_ cell: FliperImageCell, point: CGPoint) {
+        guard let indexPath = pagingView.indexPath(for: cell) else { return }
+        delegate?.viewer(self, didLongPressImageAt: indexPath.item, point: point)
+    }
+}
+
+// MARK: - FliperDismissGestureDelegate
+
+extension FliperViewerController: FliperDismissGestureDelegate {
+    func dismissGestureDidBegin(_ gesture: FliperDismissGesture) {
+        pagingView.isScrollEnabled = false
+    }
+
+    func dismissGestureDidChange(_ gesture: FliperDismissGesture, progress: CGFloat) {
+        view.backgroundColor = backgroundColor.withAlphaComponent(1.0 - progress)
+    }
+
+    func dismissGestureDidEnd(_ gesture: FliperDismissGesture, shouldDismiss: Bool) {
+        if shouldDismiss {
+            dismissViewer()
+        } else {
+            guard let cell = currentVisibleCell() else { return }
+            let screenCenter = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+            gesture.restoreScrollView(cell.scrollView, to: screenCenter) { [weak self] in
+                self?.pagingView.isScrollEnabled = !((self?.isZoomed ?? false))
+                self?.view.backgroundColor = self?.backgroundColor ?? .black
+            }
+        }
+    }
+}
+
+// MARK: - UIViewControllerTransitioningDelegate
 
 extension FliperViewerController: UIViewControllerTransitioningDelegate {
     public func animationController(forPresented presented: UIViewController, presenting: UIViewController, source: UIViewController) -> UIViewControllerAnimatedTransitioning? {
