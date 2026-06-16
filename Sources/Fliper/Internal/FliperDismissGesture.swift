@@ -117,13 +117,4 @@ final class FliperDismissGesture: UIGestureRecognizer {
             completion?()
         })
     }
-
-    func animateDismiss(_ scrollView: UIScrollView, toward point: CGPoint, duration: TimeInterval = 0.25, completion: @escaping () -> Void) {
-        UIView.animate(withDuration: duration, delay: 0, options: .curveEaseOut, animations: {
-            scrollView.alpha = 0
-            scrollView.transform = scrollView.transform.scaledBy(x: 0.5, y: 0.5)
-        }, completion: { _ in
-            completion()
-        })
-    }
 }

@@ -61,6 +61,12 @@ final class FliperImageCell: UICollectionViewCell {
         setNeedsLayout()
     }
 
+    override func prepareForReuse() {
+        super.prepareForReuse()
+        imageView.image = nil
+        resetZoom()
+    }
+
     func resetZoom() {
         scrollView.setZoomScale(1.0, animated: false)
         scrollView.contentOffset = .zero
