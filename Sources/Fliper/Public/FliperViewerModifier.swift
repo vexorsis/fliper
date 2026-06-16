@@ -3,18 +3,18 @@ import UIKit
 
 // MARK: - Data Source Adapter
 
-public final class FliperSwiftUIDataSource: FliperViewerDataSource {
-    public let images: [UIImage]
+final class FliperSwiftUIDataSource: FliperViewerDataSource {
+    let images: [UIImage]
 
-    public init(images: [UIImage]) {
+    init(images: [UIImage]) {
         self.images = images
     }
 
-    public func numberOfItems(in viewer: FliperViewerController) -> Int {
+    func numberOfItems(in viewer: FliperViewerController) -> Int {
         images.count
     }
 
-    public func viewer(_ viewer: FliperViewerController, imageAt index: Int) -> UIImage {
+    func viewer(_ viewer: FliperViewerController, imageAt index: Int) -> UIImage {
         images[index]
     }
 }
