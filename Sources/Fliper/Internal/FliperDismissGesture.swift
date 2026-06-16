@@ -9,13 +9,14 @@ protocol FliperDismissGestureDelegate: AnyObject {
 final class FliperDismissGesture: UIGestureRecognizer {
     weak var dismissDelegate: FliperDismissGestureDelegate?
     var dismissThreshold: CGFloat = 0.25
+    var dismissVelocityThreshold: CGFloat = 800.0
 
     private var startPoint = CGPoint.zero
     private var lastPoint = CGPoint.zero
     private var lastTime: TimeInterval = 0
     private var currentVelocity = CGPoint.zero
     private var isInteracting = false
-    private var targetScrollView: UIScrollView?
+    private weak var targetScrollView: UIScrollView?
 
     func setTargetScrollView(_ scrollView: UIScrollView) {
         targetScrollView = scrollView
@@ -50,6 +51,7 @@ final class FliperDismissGesture: UIGestureRecognizer {
             let dx = abs(point.x - startPoint.x)
             let dy = point.y - startPoint.y
             if dy > 3 && dy > dx {
+                guard let scrollView = targetScrollView, scrollView.zoomScale <= 1.0 else { return }
                 beginInteraction(at: point)
             }
             return
@@ -76,7 +78,7 @@ final class FliperDismissGesture: UIGestureRecognizer {
         let dy = point.y - startPoint.y
         let viewHeight = view?.bounds.height ?? 1
 
-        let shouldDismiss = abs(dy) > viewHeight * dismissThreshold || abs(currentVelocity.y) > 800
+        let shouldDismiss = abs(dy) > viewHeight * dismissThreshold || abs(currentVelocity.y) > dismissVelocityThreshold
 
         dismissDelegate?.dismissGestureDidEnd(self, shouldDismiss: shouldDismiss)
         isInteracting = false
@@ -98,9 +100,18 @@ final class FliperDismissGesture: UIGestureRecognizer {
 
         guard let scrollView = targetScrollView else { return }
 
+        let oldAnchor = scrollView.layer.anchorPoint
         let anchorX = point.x / scrollView.bounds.width
         let anchorY = point.y / scrollView.bounds.height
-        scrollView.layer.anchorPoint = CGPoint(x: anchorX, y: anchorY)
+        let newAnchor = CGPoint(x: anchorX, y: anchorY)
+
+        let widthDiff = (newAnchor.x - oldAnchor.x) * scrollView.bounds.width
+        let heightDiff = (newAnchor.y - oldAnchor.y) * scrollView.bounds.height
+        scrollView.center = CGPoint(
+            x: scrollView.center.x + widthDiff,
+            y: scrollView.center.y + heightDiff
+        )
+        scrollView.layer.anchorPoint = newAnchor
 
         scrollView.isUserInteractionEnabled = false
 
@@ -108,8 +119,19 @@ final class FliperDismissGesture: UIGestureRecognizer {
     }
 
     func restoreScrollView(_ scrollView: UIScrollView, to center: CGPoint, duration: TimeInterval = 0.15, completion: (() -> Void)? = nil) {
+        let oldAnchor = scrollView.layer.anchorPoint
+        let newAnchor = CGPoint(x: 0.5, y: 0.5)
+        let widthDiff = (newAnchor.x - oldAnchor.x) * scrollView.bounds.width
+        let heightDiff = (newAnchor.y - oldAnchor.y) * scrollView.bounds.height
+        let compensatedCenter = CGPoint(
+            x: center.x + widthDiff,
+            y: center.y + heightDiff
+        )
+
+        scrollView.layer.anchorPoint = newAnchor
+        scrollView.center = compensatedCenter
+
         UIView.animate(withDuration: duration, delay: 0, options: .curveEaseOut, animations: {
-            scrollView.layer.anchorPoint = CGPoint(x: 0.5, y: 0.5)
             scrollView.center = center
             scrollView.transform = .identity
         }, completion: { _ in

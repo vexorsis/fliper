@@ -33,7 +33,6 @@ final class FliperImageCell: UICollectionViewCell {
         scrollView.decelerationRate = .fast
         scrollView.showsVerticalScrollIndicator = false
         scrollView.showsHorizontalScrollIndicator = false
-        scrollView.layer.masksToBounds = false
         scrollView.contentInsetAdjustmentBehavior = .never
 
         imageView.contentMode = .scaleAspectFit
@@ -70,6 +69,7 @@ final class FliperImageCell: UICollectionViewCell {
     func resetZoom() {
         scrollView.setZoomScale(1.0, animated: false)
         scrollView.contentOffset = .zero
+        scrollView.contentInset = .zero
         updateZoomState()
     }
 
@@ -111,8 +111,11 @@ final class FliperImageCell: UICollectionViewCell {
         if scrollView.zoomScale > 1.0 {
             scrollView.setZoomScale(1.0, animated: true)
         } else {
+            let zoomRect = CGRect(x: point.x, y: point.y, width: 1, height: 1)
+            let savedMaxZoom = scrollView.maximumZoomScale
             scrollView.maximumZoomScale = doubleTapZoomScale
-            scrollView.zoom(to: CGRect(x: point.x, y: point.y, width: 1, height: 1), animated: true)
+            scrollView.zoom(to: zoomRect, animated: true)
+            scrollView.maximumZoomScale = savedMaxZoom
         }
     }
 
@@ -139,29 +142,20 @@ extension FliperImageCell: UIScrollViewDelegate {
     func scrollViewDidZoom(_ scrollView: UIScrollView) {
         centerImageViewAfterZoom()
         updateZoomState()
-
-        if scrollView.zoomScale <= 1.0 {
-            scrollView.maximumZoomScale = maxZoomScale
-        }
     }
 
     private func centerImageViewAfterZoom() {
-        let screenSize = scrollView.bounds.size
+        let boundsSize = scrollView.bounds.size
         let contentSize = imageView.frame.size
-
-        var offsetX: CGFloat = 0
-        var offsetY: CGFloat = 0
-
-        if contentSize.width < screenSize.width {
-            offsetX = (screenSize.width - contentSize.width) / 2.0
+        var inset = UIEdgeInsets.zero
+        if contentSize.width < boundsSize.width {
+            inset.left = (boundsSize.width - contentSize.width) / 2.0
+            inset.right = inset.left
         }
-        if contentSize.height < screenSize.height {
-            offsetY = (screenSize.height - contentSize.height) / 2.0
+        if contentSize.height < boundsSize.height {
+            inset.top = (boundsSize.height - contentSize.height) / 2.0
+            inset.bottom = inset.top
         }
-
-        imageView.center = CGPoint(
-            x: max(contentSize.width / 2.0, screenSize.width / 2.0) + offsetX,
-            y: max(contentSize.height / 2.0, screenSize.height / 2.0) + offsetY
-        )
+        scrollView.contentInset = inset
     }
 }

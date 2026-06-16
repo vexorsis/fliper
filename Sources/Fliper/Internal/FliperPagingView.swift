@@ -8,7 +8,6 @@ final class FliperPagingView: UICollectionView {
     weak var pagingDelegate: FliperPagingViewDelegate?
     var currentIndex: Int = 0
     private var bodyIsInCenter = true
-    private var isDealingScreenRotation = false
 
     init(frame: CGRect) {
         let layout = FliperPagingLayout()
@@ -51,15 +50,11 @@ extension FliperPagingView: UICollectionViewDelegate {
         let index = Int(round(indexF))
 
         let isInCenter = abs(indexF - round(indexF)) < 0.001
-
-        if bodyIsInCenter != isInCenter {
-            bodyIsInCenter = isInCenter
-        }
+        bodyIsInCenter = isInCenter
 
         guard index >= 0,
               let itemCount = dataSource?.collectionView(self, numberOfItemsInSection: 0),
               index < itemCount,
-              !isDealingScreenRotation,
               bodyIsInCenter else { return }
 
         if currentIndex != index {

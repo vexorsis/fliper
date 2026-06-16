@@ -16,13 +16,16 @@ public class FliperViewerController: UIViewController {
             }
         }
     }
-    public var backgroundColor: UIColor = .black
+    public var backgroundColor: UIColor = .black {
+        didSet { view.backgroundColor = backgroundColor }
+    }
     public var currentIndex: Int = 0
 
     private let dataSource: FliperViewerDataSource
     private var pagingView: FliperPagingView!
     private var dismissGesture: FliperDismissGesture!
     private var isZoomed = false
+    private var hasAppeared = false
 
     private static let cellReuseIdentifier = "FliperImageCell"
 
@@ -45,16 +48,22 @@ public class FliperViewerController: UIViewController {
 
     public override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
-        pagingView.frame = view.bounds
-        if let layout = pagingView.collectionViewLayout as? FliperPagingLayout {
-            layout.invalidateLayout()
+        let newBounds = view.bounds
+        if !pagingView.frame.equalTo(newBounds) {
+            pagingView.frame = newBounds
+            if let layout = pagingView.collectionViewLayout as? FliperPagingLayout {
+                layout.invalidateLayout()
+            }
+            pagingView.updateContentInset()
         }
-        pagingView.updateContentInset()
     }
 
     public override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        pagingView.scrollToPage(currentIndex)
+        if !hasAppeared {
+            hasAppeared = true
+            pagingView.scrollToPage(currentIndex)
+        }
     }
 
     public func reloadData() {
@@ -63,7 +72,7 @@ public class FliperViewerController: UIViewController {
 
     public func dismissViewer() {
         dismiss(animated: true) { [weak self] in
-            guard let self else { return }
+            guard let self, self.view.window == nil else { return }
             self.delegate?.viewerDidDismiss(self)
         }
     }
