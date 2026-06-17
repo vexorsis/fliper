@@ -24,12 +24,16 @@ final class FliperImageLoadingCoordinator {
         let task = Task<Void, Never> { [weak self] in
             do {
                 let image = try await imageLoader.loadImage(from: url)
-                guard !Task.isCancelled else { return }
-                self?.delegate?.coordinator(self!, didLoadImage: image, forItemAt: index)
+                guard !Task.isCancelled, let self else { return }
+                DispatchQueue.main.async {
+                    self.delegate?.coordinator(self, didLoadImage: image, forItemAt: index)
+                }
             } catch {
-                guard !Task.isCancelled else { return }
-                self?.failedURLs[index] = url
-                self?.delegate?.coordinator(self!, didFailWithError: error, forItemAt: index)
+                guard !Task.isCancelled, let self else { return }
+                self.failedURLs[index] = url
+                DispatchQueue.main.async {
+                    self.delegate?.coordinator(self, didFailWithError: error, forItemAt: index)
+                }
             }
         }
         tasks[index] = task
