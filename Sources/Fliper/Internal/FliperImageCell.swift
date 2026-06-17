@@ -75,18 +75,19 @@ final class FliperImageCell: UICollectionViewCell {
         errorStack.spacing = 12
         errorStack.alignment = .center
 
+        errorContainer.backgroundColor = UIColor.black.withAlphaComponent(0.5)
         errorContainer.addSubview(errorStack)
         errorStack.translatesAutoresizingMaskIntoConstraints = false
         errorContainer.translatesAutoresizingMaskIntoConstraints = false
         errorContainer.isHidden = true
         contentView.addSubview(errorContainer)
         NSLayoutConstraint.activate([
-            errorContainer.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            errorContainer.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            errorStack.topAnchor.constraint(equalTo: errorContainer.topAnchor),
-            errorStack.bottomAnchor.constraint(equalTo: errorContainer.bottomAnchor),
-            errorStack.leadingAnchor.constraint(equalTo: errorContainer.leadingAnchor),
-            errorStack.trailingAnchor.constraint(equalTo: errorContainer.trailingAnchor)
+            errorContainer.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
+            errorContainer.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
+            errorContainer.topAnchor.constraint(equalTo: contentView.topAnchor),
+            errorContainer.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
+            errorStack.centerXAnchor.constraint(equalTo: errorContainer.centerXAnchor),
+            errorStack.centerYAnchor.constraint(equalTo: errorContainer.centerYAnchor)
         ])
     }
 

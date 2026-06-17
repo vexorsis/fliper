@@ -21,7 +21,7 @@ public class FliperViewerController: UIViewController {
     }
     public var currentIndex: Int = 0
 
-    public let imageLoader: FliperImageLoader?
+    private let imageLoader: FliperImageLoader?
 
     private let dataSource: FliperViewerDataSource
     private let loadingCoordinator: FliperImageLoadingCoordinator?
@@ -29,6 +29,7 @@ public class FliperViewerController: UIViewController {
     private var dismissGesture: FliperDismissGesture!
     private var isZoomed = false
     private var hasAppeared = false
+    private var loadingIndexByCell: [UICollectionViewCell: Int] = [:]
 
     private static let cellReuseIdentifier = "FliperImageCell"
 
@@ -147,6 +148,12 @@ extension FliperViewerController: UICollectionViewDataSource {
 
     public func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: Self.cellReuseIdentifier, for: indexPath) as! FliperImageCell
+
+        if let oldIndex = loadingIndexByCell[cell] {
+            loadingCoordinator?.cancelLoading(forItemAt: oldIndex)
+        }
+        loadingIndexByCell[cell] = indexPath.item
+
         let viewerItem = item(at: indexPath.item)
         cell.configure(item: viewerItem, maxZoomScale: maxZoomScale, doubleTapZoomScale: doubleTapZoomScale)
         cell.cellDelegate = self
