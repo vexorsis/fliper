@@ -4,18 +4,18 @@ import UIKit
 // MARK: - Data Source Adapter
 
 final class FliperSwiftUIDataSource: FliperViewerDataSource {
-    let images: [UIImage]
+    let items: [FliperViewerItem]
 
-    init(images: [UIImage]) {
-        self.images = images
+    init(items: [FliperViewerItem]) {
+        self.items = items
     }
 
     func numberOfItems(in viewer: FliperViewerController) -> Int {
-        images.count
+        items.count
     }
 
-    func viewer(_ viewer: FliperViewerController, imageAt index: Int) -> UIImage {
-        images[index]
+    func viewer(_ viewer: FliperViewerController, itemAt index: Int) -> FliperViewerItem {
+        items[index]
     }
 }
 
@@ -30,10 +30,10 @@ final class FliperPresentationCoordinator: ObservableObject, FliperViewerDelegat
         presentedViewer = nil
     }
 
-    func present(images: [UIImage], currentIndex: Int, selectedIndex: Binding<Int?>) {
+    func present(items: [FliperViewerItem], imageLoader: FliperImageLoader?, currentIndex: Int, selectedIndex: Binding<Int?>) {
         guard let presenter = topViewController() else { return }
-        let dataSource = FliperSwiftUIDataSource(images: images)
-        let viewer = FliperViewerController(dataSource: dataSource, currentIndex: currentIndex)
+        let dataSource = FliperSwiftUIDataSource(items: items)
+        let viewer = FliperViewerController(dataSource: dataSource, imageLoader: imageLoader, currentIndex: currentIndex)
         viewer.delegate = self
         self.selectedIndex = selectedIndex
         self.presentedViewer = viewer
@@ -59,14 +59,15 @@ final class FliperPresentationCoordinator: ObservableObject, FliperViewerDelegat
 
 struct FliperViewerModifier: ViewModifier {
     @Binding var selectedIndex: Int?
-    let images: [UIImage]
+    let items: [FliperViewerItem]
+    var imageLoader: FliperImageLoader? = nil
     @StateObject private var coordinator = FliperPresentationCoordinator()
 
     func body(content: Content) -> some View {
         content
             .onChange(of: selectedIndex) { newValue in
                 if let index = newValue {
-                    coordinator.present(images: images, currentIndex: index, selectedIndex: $selectedIndex)
+                    coordinator.present(items: items, imageLoader: imageLoader, currentIndex: index, selectedIndex: $selectedIndex)
                 } else {
                     coordinator.dismiss()
                 }
@@ -74,16 +75,29 @@ struct FliperViewerModifier: ViewModifier {
     }
 }
 
-// MARK: - View Extension
+// MARK: - View Extensions
 
 extension View {
     public func fliperViewer(
         selectedIndex: Binding<Int?>,
-        images: [UIImage]
+        items: [FliperViewerItem],
+        imageLoader: FliperImageLoader? = nil
     ) -> some View {
         modifier(FliperViewerModifier(
             selectedIndex: selectedIndex,
-            images: images
+            items: items,
+            imageLoader: imageLoader
+        ))
+    }
+
+    public func fliperViewer(
+        selectedIndex: Binding<Int?>,
+        images: [UIImage]
+    ) -> some View {
+        let items = images.map { FliperViewerItem.image($0) }
+        return modifier(FliperViewerModifier(
+            selectedIndex: selectedIndex,
+            items: items
         ))
     }
 }
