@@ -109,7 +109,7 @@ The cell gains a spinner and an error state, controlled externally by the contro
 func configure(item: FliperViewerItem, maxZoomScale: CGFloat, doubleTapZoomScale: CGFloat)
 func showLoading()
 func showError()
-func setImage(_ image: UIImage)
+func setImage(_ image: UIImage)  // 0.25s crossfade if replacing a thumbnail; instant if replacing spinner
 ```
 
 ### New Subviews
@@ -122,8 +122,8 @@ func setImage(_ image: UIImage)
 | Item type | On configure | On load success | On load failure |
 |---|---|---|---|
 | `.image` | Image set directly, no spinner/error | N/A | N/A |
-| `.url` | Spinner shown | `setImage` replaces spinner with image | `showError` replaces spinner with error+retry |
-| `.imageAndURL` | Thumbnail set, spinner shown over it | `setImage` crossfades from thumbnail to original | `showError` shows error overlay over thumbnail |
+| `.url` | Spinner shown | `setImage` replaces spinner with image (no animation for `.url` items) | `showError` replaces spinner with error+retry |
+| `.imageAndURL` | Thumbnail set, spinner shown over it | `setImage` crossfades from thumbnail to original (0.25s fade transition) | `showError` shows error overlay over thumbnail |
 
 ### Retry
 
