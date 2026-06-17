@@ -18,6 +18,7 @@ struct ContentView: View {
         URL(string: "https://picsum.photos/id/100/800/600")!,
         URL(string: "https://picsum.photos/id/110/800/600")!,
         URL(string: "https://picsum.photos/id/120/800/600")!,
+        URL(string: "https://picsum.photos/id/106/600/800")!,
     ]
 
     private let columns = [
