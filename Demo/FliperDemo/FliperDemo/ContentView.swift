@@ -3,9 +3,8 @@ import Fliper
 
 struct ContentView: View {
     @State private var selectedIndex: Int?
-    @State private var loadedImages: [UIImage?] = []
 
-    private let urls = [
+    private let items: [FliperViewerItem] = [
         URL(string: "https://picsum.photos/id/10/800/600")!,
         URL(string: "https://picsum.photos/id/20/800/600")!,
         URL(string: "https://picsum.photos/id/30/800/600")!,
@@ -19,7 +18,7 @@ struct ContentView: View {
         URL(string: "https://picsum.photos/id/110/800/600")!,
         URL(string: "https://picsum.photos/id/120/800/600")!,
         URL(string: "https://picsum.photos/id/106/600/800")!,
-    ]
+    ].map { FliperViewerItem.url($0) }
 
     private let columns = [
         GridItem(.flexible(), spacing: 2),
@@ -27,57 +26,30 @@ struct ContentView: View {
         GridItem(.flexible(), spacing: 2),
     ]
 
-    private var validImages: [UIImage] {
-        loadedImages.compactMap { $0 }
-    }
-
-    private var allLoaded: Bool {
-        loadedImages.count == urls.count && loadedImages.allSatisfy { $0 != nil }
-    }
-
     var body: some View {
-        Group {
-            if !allLoaded {
-                ProgressView("Loading images...")
-            } else {
-                ScrollView {
-                    LazyVGrid(columns: columns, spacing: 2) {
-                        ForEach(0..<urls.count, id: \.self) { index in
-                            if let image = loadedImages[index] {
-                                Image(uiImage: image)
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                                    .frame(minWidth: 0, maxWidth: .infinity)
-                                    .aspectRatio(1, contentMode: .fit)
-                                    .clipped()
-                                    .onTapGesture {
-                                        selectedIndex = index
-                                    }
-                            }
+        ScrollView {
+            LazyVGrid(columns: columns, spacing: 2) {
+                ForEach(0..<items.count, id: \.self) { index in
+                    Color.gray
+                        .aspectRatio(1, contentMode: .fit)
+                        .onTapGesture {
+                            selectedIndex = index
                         }
-                    }
                 }
-                .fliperViewer(selectedIndex: $selectedIndex, images: validImages)
             }
         }
-        .task { await loadImages() }
+        .fliperViewer(selectedIndex: $selectedIndex, items: items, imageLoader: DemoImageLoader.shared)
     }
+}
 
-    private func loadImages() async {
-        loadedImages = Array(repeating: nil as UIImage?, count: urls.count)
-        await withTaskGroup(of: (Int, UIImage?).self) { group in
-            for (index, url) in urls.enumerated() {
-                group.addTask {
-                    guard let data = try? Data(contentsOf: url),
-                          let image = UIImage(data: data) else {
-                        return (index, nil)
-                    }
-                    return (index, image)
-                }
-            }
-            for await (index, image) in group {
-                loadedImages[index] = image
-            }
+final class DemoImageLoader: FliperImageLoader {
+    static let shared = DemoImageLoader()
+
+    func loadImage(from url: URL) async throws -> UIImage {
+        let (data, _) = try await URLSession.shared.data(from: url)
+        guard let image = UIImage(data: data) else {
+            throw URLError(.badServerResponse)
         }
+        return image
     }
 }
