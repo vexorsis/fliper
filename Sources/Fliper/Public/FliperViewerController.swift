@@ -21,7 +21,10 @@ public class FliperViewerController: UIViewController {
     }
     public var currentIndex: Int = 0
 
+    public let imageLoader: FliperImageLoader?
+
     private let dataSource: FliperViewerDataSource
+    private let loadingCoordinator: FliperImageLoadingCoordinator?
     private var pagingView: FliperPagingView!
     private var dismissGesture: FliperDismissGesture!
     private var isZoomed = false
@@ -29,12 +32,19 @@ public class FliperViewerController: UIViewController {
 
     private static let cellReuseIdentifier = "FliperImageCell"
 
-    public init(dataSource: FliperViewerDataSource, currentIndex: Int = 0) {
+    public init(dataSource: FliperViewerDataSource, imageLoader: FliperImageLoader? = nil, currentIndex: Int = 0) {
         self.dataSource = dataSource
+        self.imageLoader = imageLoader
         self.currentIndex = currentIndex
+        if let imageLoader {
+            self.loadingCoordinator = FliperImageLoadingCoordinator(imageLoader: imageLoader)
+        } else {
+            self.loadingCoordinator = nil
+        }
         super.init(nibName: nil, bundle: nil)
         modalPresentationStyle = .custom
         transitioningDelegate = self
+        loadingCoordinator?.delegate = self
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -73,6 +83,7 @@ public class FliperViewerController: UIViewController {
     }
 
     public func dismissViewer() {
+        loadingCoordinator?.cancelAll()
         dismiss(animated: true) { [weak self] in
             guard let self, self.view.window == nil else { return }
             self.delegate?.viewerDidDismiss(self)
@@ -113,6 +124,18 @@ public class FliperViewerController: UIViewController {
         guard let cell = pagingView.cellForItem(at: IndexPath(item: index, section: 0)) as? FliperImageCell else { return }
         cell.resetZoom()
     }
+
+    private func item(at index: Int) -> FliperViewerItem {
+        dataSource.viewer(self, itemAt: index)
+    }
+
+    private func startLoadingIfNeeded(item: FliperViewerItem, at index: Int) {
+        guard let url = item.remoteURL, let loadingCoordinator else {
+            assert(item.remoteURL == nil || imageLoader != nil, "FliperViewerItem.url or .imageAndURL requires an imageLoader")
+            return
+        }
+        loadingCoordinator.startLoading(url: url, forItemAt: index)
+    }
 }
 
 // MARK: - UICollectionViewDataSource
@@ -124,9 +147,10 @@ extension FliperViewerController: UICollectionViewDataSource {
 
     public func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
         let cell = collectionView.dequeueReusableCell(withReuseIdentifier: Self.cellReuseIdentifier, for: indexPath) as! FliperImageCell
-        let image = dataSource.viewer(self, imageAt: indexPath.item)
-        cell.configure(image: image, maxZoomScale: maxZoomScale, doubleTapZoomScale: doubleTapZoomScale)
+        let viewerItem = item(at: indexPath.item)
+        cell.configure(item: viewerItem, maxZoomScale: maxZoomScale, doubleTapZoomScale: doubleTapZoomScale)
         cell.cellDelegate = self
+        startLoadingIfNeeded(item: viewerItem, at: indexPath.item)
         return cell
     }
 }
@@ -157,6 +181,29 @@ extension FliperViewerController: FliperImageCellDelegate {
     func cellDidLongPress(_ cell: FliperImageCell, point: CGPoint) {
         guard let indexPath = pagingView.indexPath(for: cell) else { return }
         delegate?.viewer(self, didLongPressImageAt: indexPath.item, point: point)
+    }
+
+    func cellDidTapRetry(_ cell: FliperImageCell) {
+        guard let indexPath = pagingView.indexPath(for: cell) else { return }
+        let index = indexPath.item
+        cell.showLoading()
+        loadingCoordinator?.retry(forItemAt: index)
+    }
+}
+
+// MARK: - FliperImageLoadingCoordinatorDelegate
+
+extension FliperViewerController: FliperImageLoadingCoordinatorDelegate {
+    func coordinator(_ coordinator: FliperImageLoadingCoordinator,
+                     didLoadImage image: UIImage, forItemAt index: Int) {
+        guard let cell = pagingView.cellForItem(at: IndexPath(item: index, section: 0)) as? FliperImageCell else { return }
+        cell.setImage(image)
+    }
+
+    func coordinator(_ coordinator: FliperImageLoadingCoordinator,
+                     didFailWithError error: Error, forItemAt index: Int) {
+        guard let cell = pagingView.cellForItem(at: IndexPath(item: index, section: 0)) as? FliperImageCell else { return }
+        cell.showError()
     }
 }
 
